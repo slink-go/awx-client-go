@@ -14,10 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This file contains the implementation of the job template types.
+// This file contains the implementation of the job template type.
 
-package awx
+package api
 
-type JobTemplateLaunch struct {
-	JobTemplateData *JobTemplate `json:"job_template_data,omitempty"`
+type Label struct {
+	id   int
+	name string
+}
+
+func (t *Label) Id() int {
+	return t.id
+}
+
+func (t *Label) Name() string {
+	return t.name
 }

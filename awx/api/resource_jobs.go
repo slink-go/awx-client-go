@@ -17,19 +17,18 @@ limitations under the License.
 // This file contains the implementation of the resource that manages the collection of
 // job templates.
 
-package awx
+package api
 
 import (
 	"fmt"
-
-	"github.com/moolitayer/awx-client-go/awx/internal/data"
+	"github.com/slink-go/awx-client-go/awx/api/internal/data"
 )
 
 type JobsResource struct {
 	Resource
 }
 
-func NewJobsResource(connection *Connection, path string) *JobsResource {
+func NewJobsResource(connection *Awx, path string) *JobsResource {
 	resource := new(JobsResource)
 	resource.connection = connection
 	resource.path = path

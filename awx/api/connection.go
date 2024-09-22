@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package awx
+package api
 
 import (
 	"bytes"
@@ -22,21 +22,19 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	data2 "github.com/slink-go/awx-client-go/awx/api/internal/data"
+	"github.com/slink-go/logging"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
-
-	"github.com/golang/glog"
-	"github.com/moolitayer/awx-client-go/awx/internal/data"
 )
 
 // Version is the version of the client.
-//
 const Version = "0.0.0"
 
-type ConnectionBuilder struct {
+type AwxClientBuilder struct {
 	url      string
 	proxy    string
 	username string
@@ -51,7 +49,7 @@ type ConnectionBuilder struct {
 	caFiles []string
 }
 
-type Connection struct {
+type Awx struct {
 	// Basic data:
 	base     string
 	username string
@@ -64,11 +62,14 @@ type Connection struct {
 
 	// The underlying HTTP client:
 	client *http.Client
+
+	// logger
+	logger logging.Logger
 }
 
-func NewConnectionBuilder() *ConnectionBuilder {
+func NewAwxClientBuilder() *AwxClientBuilder {
 	// Create an empty builder:
-	b := new(ConnectionBuilder)
+	b := new(AwxClientBuilder)
 
 	// Set default values:
 	b.agent = "AWXClient/" + Version
@@ -76,22 +77,22 @@ func NewConnectionBuilder() *ConnectionBuilder {
 	return b
 }
 
-func (b *ConnectionBuilder) URL(url string) *ConnectionBuilder {
+func (b *AwxClientBuilder) URL(url string) *AwxClientBuilder {
 	b.url = url
 	return b
 }
 
-func (b *ConnectionBuilder) Proxy(proxy string) *ConnectionBuilder {
+func (b *AwxClientBuilder) Proxy(proxy string) *AwxClientBuilder {
 	b.proxy = proxy
 	return b
 }
 
-func (b *ConnectionBuilder) Username(username string) *ConnectionBuilder {
+func (b *AwxClientBuilder) Username(username string) *AwxClientBuilder {
 	b.username = username
 	return b
 }
 
-func (b *ConnectionBuilder) Password(password string) *ConnectionBuilder {
+func (b *AwxClientBuilder) Password(password string) *AwxClientBuilder {
 	b.password = password
 	return b
 }
@@ -99,23 +100,22 @@ func (b *ConnectionBuilder) Password(password string) *ConnectionBuilder {
 // Agent sets the value of the HTTP user agent header that the client will use in all
 // the requests sent to the server. This is optional, and the default value is the name
 // of the client followed by the version number, for example 'GoClient/0.0.1'.
-//
-func (b *ConnectionBuilder) Agent(agent string) *ConnectionBuilder {
+func (b *AwxClientBuilder) Agent(agent string) *AwxClientBuilder {
 	b.agent = agent
 	return b
 }
 
-func (b *ConnectionBuilder) Token(token string) *ConnectionBuilder {
+func (b *AwxClientBuilder) Token(token string) *AwxClientBuilder {
 	b.token = token
 	return b
 }
 
-func (b *ConnectionBuilder) Bearer(bearer string) *ConnectionBuilder {
+func (b *AwxClientBuilder) Bearer(bearer string) *AwxClientBuilder {
 	b.bearer = bearer
 	return b
 }
 
-func (b *ConnectionBuilder) Insecure(insecure bool) *ConnectionBuilder {
+func (b *AwxClientBuilder) Insecure(insecure bool) *AwxClientBuilder {
 	b.insecure = insecure
 	return b
 }
@@ -123,8 +123,7 @@ func (b *ConnectionBuilder) Insecure(insecure bool) *ConnectionBuilder {
 // CACertificates adds a list of CA certificates that will be trusted when verifying the
 // certificates presented by the AWX server. The certs parameter must be a list of PEM encoded
 // certificates.
-//
-func (b *ConnectionBuilder) CACertificates(certs []byte) *ConnectionBuilder {
+func (b *AwxClientBuilder) CACertificates(certs []byte) *AwxClientBuilder {
 	if len(certs) > 0 {
 		b.caCerts = append(b.caCerts, certs)
 	}
@@ -134,15 +133,14 @@ func (b *ConnectionBuilder) CACertificates(certs []byte) *ConnectionBuilder {
 // CAFile sets the name of the file that contains the PEM encoded CA certificates that will be
 // trusted when verifying the certificate presented by the AWX server. It can be used multiple times
 // to specify multiple files.
-//
-func (b *ConnectionBuilder) CAFile(file string) *ConnectionBuilder {
+func (b *AwxClientBuilder) CAFile(file string) *AwxClientBuilder {
 	if file != "" {
 		b.caFiles = append(b.caFiles, file)
 	}
 	return b
 }
 
-func (b *ConnectionBuilder) Build() (c *Connection, err error) {
+func (b *AwxClientBuilder) Build() (c *Awx, err error) {
 	// Check the URL:
 	if b.url == "" {
 		err = fmt.Errorf("The URL is mandatory")
@@ -245,7 +243,7 @@ func (b *ConnectionBuilder) Build() (c *Connection, err error) {
 	}
 
 	// Allocate the connection and save all the objects that will be required later:
-	c = new(Connection)
+	c = new(Awx)
 	c.base = b.url
 	c.username = b.username
 	c.password = b.password
@@ -257,35 +255,48 @@ func (b *ConnectionBuilder) Build() (c *Connection, err error) {
 		c.base = c.base + "/"
 	}
 
+	c.logger = logging.GetLogger("connection")
+
 	return
 }
 
 // Jobs returns a reference to the resource that manages the collection of jobs.
-//
-func (c *Connection) Jobs() *JobsResource {
+func (c *Awx) Jobs() *JobsResource {
 	return NewJobsResource(c, "jobs")
 }
 
 // JobTemplates returns a reference to the resource that manages the collection of job templates.
-//
-func (c *Connection) JobTemplates() *JobTemplatesResource {
+func (c *Awx) JobTemplates() *JobTemplatesResource {
 	return NewJobTemplatesResource(c, "job_templates")
 }
 
+// JobTemplateSurveySpec returns a reference to the resource that manages the job template survey specification.
+func (c *Awx) JobTemplateSurveySpec() *JobTemplateSurveySpecResource {
+	return NewJobTemplateSurveySpecResource(c, "job_templates/%v/survey_spec")
+}
+
+// WorkflowJobTemplates returns a reference to the resource that manages the collection of job templates.
+func (c *Awx) WorkflowJobTemplates() *WorkflowJobTemplatesResource {
+	return NewWorkflowJobTemplatesResource(c, "workflow_job_templates")
+}
+
+// WorkflowJobTemplateSurveySpec returns a reference to the resource that manages the job template survey specification.
+func (c *Awx) WorkflowJobTemplateSurveySpec() *WorkflowJobTemplateSurveySpecResource {
+	return NewWorkflowJobTemplateSurveySpecResource(c, "workflow_job_templates/%v/survey_spec")
+}
+
 // Projects returns a reference to the resource that manages the collection of projects.
-//
-func (c *Connection) Projects() *ProjectsResource {
+func (c *Awx) Projects() *ProjectsResource {
 	return NewProjectsResource(c, "projects")
 }
 
-func (c *Connection) Close() {
+func (c *Awx) Close() {
 	c.token = ""
 }
 
 // ensureToken makes sure that there is a token available. If there isn't, then it will request a
 // new onw to the server.
-//
-func (c *Connection) ensureToken() error {
+func (c *Awx) ensureToken() error {
 	if c.token != "" || c.bearer != "" {
 		return nil
 	}
@@ -293,8 +304,7 @@ func (c *Connection) ensureToken() error {
 }
 
 // getToken requests a new authentication token.
-//
-func (c *Connection) getToken() (err error) {
+func (c *Awx) getToken() (err error) {
 	if c.OAuth2Supported() {
 		err = c.getPATToken()
 	} else {
@@ -306,7 +316,7 @@ func (c *Connection) getToken() (err error) {
 	return nil
 }
 
-func (c *Connection) OAuth2Supported() bool {
+func (c *Awx) OAuth2Supported() bool {
 	err := c.head("", "o")
 	if err != nil {
 		// Can fail due to other reasons(i.e network availability) and in that case
@@ -316,12 +326,10 @@ func (c *Connection) OAuth2Supported() bool {
 	return true
 }
 
-func (c *Connection) getAuthToken() error {
-	if glog.V(2) {
-		glog.Infoln("Requesting Authtoken")
-	}
-	var request data.AuthTokenPostRequest
-	var response data.AuthTokenPostResponse
+func (c *Awx) getAuthToken() error {
+	c.logger.Info("Requesting Authtoken")
+	var request data2.AuthTokenPostRequest
+	var response data2.AuthTokenPostResponse
 	request.Username = c.username
 	request.Password = c.password
 	err := c.post("authtoken", nil, &request, &response)
@@ -335,12 +343,10 @@ func (c *Connection) getAuthToken() error {
 	return nil
 }
 
-func (c *Connection) getPATToken() error {
-	if glog.V(2) {
-		glog.Infoln("Requesting OAuth2 PAT Token")
-	}
-	var request data.PATPostRequest
-	var response data.PATPostResponse
+func (c *Awx) getPATToken() error {
+	c.logger.Debug("Requesting OAuth2 PAT Token")
+	var request data2.PATPostRequest
+	var response data2.PATPostResponse
 	request.Description = "AWX Go Client"
 	request.Scope = "write"
 	err := c.post(
@@ -357,8 +363,7 @@ func (c *Connection) getPATToken() error {
 }
 
 // makeURL calculates the absolute URL for the given relative path and query.
-//
-func (c *Connection) makeURL(path, prefix string, query url.Values) string {
+func (c *Awx) makeURL(path, prefix string, query url.Values) string {
 	// Allocate a buffer large enough for the longest possible URL:
 	buffer := new(bytes.Buffer)
 	buffer.Grow(len(c.base) + len(prefix) + 1 + len(path) + 1)
@@ -384,7 +389,7 @@ func (c *Connection) makeURL(path, prefix string, query url.Values) string {
 	return buffer.String()
 }
 
-func (c *Connection) authenticatedGet(path string, query url.Values, output interface{}) error {
+func (c *Awx) authenticatedGet(path string, query url.Values, output interface{}) error {
 	err := c.ensureToken()
 	if err != nil {
 		return err
@@ -392,21 +397,23 @@ func (c *Connection) authenticatedGet(path string, query url.Values, output inte
 	return c.get(path, query, output)
 }
 
-func (c *Connection) get(path string, query url.Values, output interface{}) error {
+func (c *Awx) get(path string, query url.Values, output interface{}) error {
 	outputBytes, err := c.rawGet(path, query)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(outputBytes, output)
+	err = json.Unmarshal(outputBytes, output)
+	//fmt.Printf("%v", string(outputBytes))
+	return err
 }
 
-func (c *Connection) head(path, prefix string) error {
+func (c *Awx) head(path, prefix string) error {
 	if err := c.rawHead(path, prefix); err != nil {
 		return err
 	}
 	return nil
 }
-func (c *Connection) rawHead(path, prefix string) (err error) {
+func (c *Awx) rawHead(path, prefix string) (err error) {
 	address := c.makeURL(path, prefix, nil)
 	request, err := http.NewRequest(http.MethodHead, address, nil)
 	if err != nil {
@@ -415,11 +422,11 @@ func (c *Connection) rawHead(path, prefix string) (err error) {
 	c.setAgent(request)
 	c.setCredentials(request)
 	c.setAccept(request)
-	if glog.V(2) {
-		glog.Infof("Sending HEAD request to '%s'.", address)
-		glog.Info("Request headers:\n")
+	if c.logger.IsDebugEnabled() {
+		c.logger.Info("Sending HEAD request to '%s'.", address)
+		c.logger.Info("Request headers:")
 		for key, val := range request.Header {
-			glog.Infof("	%s: %v", key, val)
+			c.logger.Info("	%s: %v", key, val)
 		}
 	}
 	response, err := c.client.Do(request)
@@ -436,7 +443,7 @@ func (c *Connection) rawHead(path, prefix string) (err error) {
 	}
 	return
 }
-func (c *Connection) rawGet(path string, query url.Values) (output []byte, err error) {
+func (c *Awx) rawGet(path string, query url.Values) (output []byte, err error) {
 	// Send the request:
 	address := c.makeURL(path, c.version, query)
 	request, err := http.NewRequest(http.MethodGet, address, nil)
@@ -446,13 +453,11 @@ func (c *Connection) rawGet(path string, query url.Values) (output []byte, err e
 	c.setAgent(request)
 	c.setCredentials(request)
 	c.setAccept(request)
-	if glog.V(2) {
-		glog.Infof("Sending GET request to '%s'.", address)
-	}
-	if glog.V(3) {
-		glog.Info("Request headers:\n")
+	c.logger.Debug("Sending GET request to '%s'.", address)
+	if c.logger.IsTraceEnabled() {
+		c.logger.Trace("Request headers:\n")
 		for key, val := range request.Header {
-			glog.Infof("	%s: %v", key, filterHeader(key, val))
+			c.logger.Trace("	%s: %v", key, filterHeader(key, val))
 		}
 	}
 	response, err := c.client.Do(request)
@@ -467,11 +472,11 @@ func (c *Connection) rawGet(path string, query url.Values) (output []byte, err e
 	if err != nil {
 		return
 	}
-	if glog.V(3) {
-		glog.Infof("Response body:\n%s", c.indent(filterJsonBytes(output)))
-		glog.Info("Response headers:")
+	if c.logger.IsDebugEnabled() {
+		c.logger.Info("Response body:\n%s", c.indent(filterJsonBytes(output)))
+		c.logger.Info("Response headers:")
 		for key, val := range response.Header {
-			glog.Infof("	%s: %v", key, filterHeader(key, val))
+			c.logger.Info("	%s: %v", key, filterHeader(key, val))
 		}
 
 	}
@@ -486,7 +491,7 @@ func (c *Connection) rawGet(path string, query url.Values) (output []byte, err e
 	return
 }
 
-func (c *Connection) authenticatedPost(path string, query url.Values, input interface{}, output interface{}) error {
+func (c *Awx) authenticatedPost(path string, query url.Values, input interface{}, output interface{}) error {
 	err := c.ensureToken()
 	if err != nil {
 		return err
@@ -494,7 +499,7 @@ func (c *Connection) authenticatedPost(path string, query url.Values, input inte
 	return c.post(path, query, input, output)
 }
 
-func (c *Connection) post(path string, query url.Values, input interface{}, output interface{}) error {
+func (c *Awx) post(path string, query url.Values, input interface{}, output interface{}) error {
 	inputBytes, err := json.Marshal(input)
 	if err != nil {
 		return err
@@ -506,7 +511,7 @@ func (c *Connection) post(path string, query url.Values, input interface{}, outp
 	return json.Unmarshal(outputBytes, output)
 }
 
-func (c *Connection) rawPost(path string, query url.Values, input []byte) (output []byte, err error) {
+func (c *Awx) rawPost(path string, query url.Values, input []byte) (output []byte, err error) {
 	// Post the input bytes:
 	address := c.makeURL(path, c.version, query)
 	buffer := bytes.NewBuffer(input)
@@ -518,14 +523,12 @@ func (c *Connection) rawPost(path string, query url.Values, input []byte) (outpu
 	c.setCredentials(request)
 	c.setContentType(request)
 	c.setAccept(request)
-	if glog.V(2) {
-		glog.Infof("Sending POST request to '%s'.", address)
-	}
-	if glog.V(3) {
-		glog.Infof("Request body:\n%s", c.indent(filterJsonBytes(input)))
-		glog.Infof("Request headers:")
+	c.logger.Debug("Sending POST request to '%s'.", address)
+	if c.logger.IsTraceEnabled() {
+		c.logger.Trace("Request body:\n%s", c.indent(filterJsonBytes(input)))
+		c.logger.Trace("Request headers:")
 		for key, val := range request.Header {
-			glog.Infof("	%s: %v", key, filterHeader(key, val))
+			c.logger.Trace("	%s: %v", key, filterHeader(key, val))
 		}
 	}
 	response, err := c.client.Do(request)
@@ -540,11 +543,11 @@ func (c *Connection) rawPost(path string, query url.Values, input []byte) (outpu
 	if err != nil {
 		return
 	}
-	if glog.V(3) {
-		glog.Infof("Response body:\n%s", c.indent(filterJsonBytes(output)))
-		glog.Info("Response headers:")
+	if c.logger.IsDebugEnabled() {
+		c.logger.Info("Response body:\n%s", c.indent(filterJsonBytes(output)))
+		c.logger.Info("Response headers:")
 		for key, val := range response.Header {
-			glog.Infof("	%s: %v", key, val)
+			c.logger.Info("	%s: %v", key, val)
 		}
 	}
 	if response.StatusCode > 202 {
@@ -558,11 +561,11 @@ func (c *Connection) rawPost(path string, query url.Values, input []byte) (outpu
 	return
 }
 
-func (c *Connection) setAgent(request *http.Request) {
+func (c *Awx) setAgent(request *http.Request) {
 	request.Header.Set("User-Agent", c.agent)
 }
 
-func (c *Connection) setCredentials(request *http.Request) {
+func (c *Awx) setCredentials(request *http.Request) {
 	if c.token != "" {
 		request.Header.Set("Authorization", "Token "+c.token)
 	} else if c.bearer != "" {
@@ -572,15 +575,15 @@ func (c *Connection) setCredentials(request *http.Request) {
 	}
 }
 
-func (c *Connection) setContentType(request *http.Request) {
+func (c *Awx) setContentType(request *http.Request) {
 	request.Header.Set("Content-Type", "application/json")
 }
 
-func (c *Connection) setAccept(request *http.Request) {
+func (c *Awx) setAccept(request *http.Request) {
 	request.Header.Set("Accept", "application/json")
 }
 
-func (c *Connection) indent(data []byte) []byte {
+func (c *Awx) indent(data []byte) []byte {
 	buffer := new(bytes.Buffer)
 	err := json.Indent(buffer, data, "", "  ")
 	if err != nil {
@@ -598,13 +601,13 @@ func filterJsonBytes(bytes []byte) []byte {
 	var jsonObj interface{}
 	err := json.Unmarshal(bytes, &jsonObj)
 	if err != nil {
-		glog.Warningf("Error parsing: %v", err)
+		logging.GetLogger("connection").Warning("Error parsing: %v", err)
 		return []byte{}
 	}
 	jsonObj = filterJsonObject(jsonObj)
 	ret, err := json.Marshal(jsonObj)
 	if err != nil {
-		glog.Warningf("Error encoding: %v", err)
+		logging.GetLogger("connection").Warning("Error encoding: %v", err)
 		return []byte{}
 	}
 	return ret

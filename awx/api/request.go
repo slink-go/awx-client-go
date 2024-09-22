@@ -17,7 +17,7 @@ limitations under the License.
 // This file contains the the implementation of the capabilities that are common to any kind of
 // request.
 
-package awx
+package api
 
 import (
 	"fmt"

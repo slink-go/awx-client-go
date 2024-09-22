@@ -38,10 +38,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	awx "github.com/slink-go/awx-client-go/awx/client"
+	"github.com/slink-go/logging"
 	"strings"
-
-	"github.com/golang/glog"
-	awx "github.com/moolitayer/awx-client-go/awx"
 )
 
 var (
@@ -56,7 +55,7 @@ var (
 	limit         string
 	extraVarsFlag string
 
-//	extraVar map[string]interface{}
+	//	extraVar map[string]interface{}
 )
 
 func init() {
@@ -93,7 +92,7 @@ func main() {
 	}
 
 	// Connect to the server, and remember to close the connection:
-	connection, err := awx.NewConnectionBuilder().
+	client, err := awx.NewAwxClientBuilder().
 		URL(url).
 		Username(username).
 		Password(password).
@@ -104,10 +103,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer connection.Close()
+	defer client.Close()
 
 	// Get the template by name
-	templatesResource := connection.JobTemplates()
+	templatesResource := client.JobTemplates()
 	templatesResponse, err := templatesResource.Get().
 		Filter("project__name", project).
 		Filter("name", template).
@@ -129,15 +128,15 @@ func main() {
 
 	// Launch all corresponding templated
 	for _, t := range templatesResponse.Results() {
-		launchResource := connection.JobTemplates().Id(t.Id()).Launch()
+		launchResource := client.JobTemplates().Id(t.Id()).Launch()
 
 		if limit != "" && !t.AskLimitOnLaunch() {
-			glog.Warningf("About to launch template '%s' with limit '%s', but 'prompt-on-launch' is false. Limit will be ignored",
+			logging.GetLogger("launch job template").Warning("About to launch template '%s' with limit '%s', but 'prompt-on-launch' is false. Limit will be ignored",
 				template, limit)
 		}
 
 		if extraVars != nil && !t.AskVarsOnLaunch() {
-			glog.Warningf("About to launch template '%s' with extra-vars, but 'prompt-on-launch' is false. Extra Variables will be ignored",
+			logging.GetLogger("launch job template").Warning("About to launch template '%s' with extra-vars, but 'prompt-on-launch' is false. Extra Variables will be ignored",
 				template)
 		}
 
@@ -151,7 +150,7 @@ func main() {
 			return
 		}
 
-		glog.Infof(
+		logging.GetLogger("launch job template").Info(
 			"Request to launch AWX job from template '%s' has been sent, job identifier is '%v'",
 			template,
 			response.Job,

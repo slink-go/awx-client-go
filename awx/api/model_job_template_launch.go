@@ -14,29 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This file contains the implementation of the job template type.
+// This file contains the implementation of the job template types.
 
-package awx
+package api
 
-type JobTemplate struct {
-	id               int
-	name             string
-	askLimitOnLaunch bool
-	askVarsOnLaunch  bool
-}
-
-func (t *JobTemplate) Id() int {
-	return t.id
-}
-
-func (t *JobTemplate) Name() string {
-	return t.name
-}
-
-func (t *JobTemplate) AskLimitOnLaunch() bool {
-	return t.askLimitOnLaunch
-}
-
-func (t *JobTemplate) AskVarsOnLaunch() bool {
-	return t.askVarsOnLaunch
+type JobTemplateLaunch struct {
+	JobTemplateData *JobTemplate `json:"job_template_data,omitempty"`
 }

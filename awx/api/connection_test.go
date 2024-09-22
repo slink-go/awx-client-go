@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package awx
+package api
 
 import (
 	"testing"
@@ -69,7 +69,7 @@ func TestFilterJsonBytes(t *testing.T) {
 // When the api/o endpoint is not available, the server should accquire a token
 // through api/v2/users/<name>/personal_tokens
 func TestOAUTH2Token(t *testing.T) {
-	connection, err := NewConnectionBuilder().
+	connection, err := NewAwxClientBuilder().
 		URL("http://localhost:9100/api").
 		Username("admin").
 		Password("password").
@@ -90,7 +90,7 @@ func TestOAUTH2Token(t *testing.T) {
 	// Trigger the auth flow.
 	getProjectsRequest := projectsResource.Get()
 	if len(connection.token) != 0 || len(connection.bearer) != 0 {
-		t.Errorf("Connection should have no tokens. token: '%s', bearer: '%s'",
+		t.Errorf("Awx should have no tokens. token: '%s', bearer: '%s'",
 			connection.token,
 			connection.bearer)
 	}
@@ -99,13 +99,12 @@ func TestOAUTH2Token(t *testing.T) {
 		panic(err)
 	}
 	if len(connection.token) != 0 || len(connection.bearer) == 0 {
-		t.Errorf("Connection should have only a bearer token. token: '%s', bearer: '%s'",
+		t.Errorf("Awx should have only a bearer token. token: '%s', bearer: '%s'",
 			connection.token,
 			connection.bearer)
 	}
 }
 
-//
 // When the api/o endpoint is not available, the server should accquire a token
 // through api/v2/authtoken/
 func TestPreOAUTH2(t *testing.T) {
@@ -113,7 +112,7 @@ func TestPreOAUTH2(t *testing.T) {
 	// Password manuall edited in cassete:
 	// Basic = printf "admin:PASSWORD"| base64
 	// Body = printf '{"username":"admin","password":"PASSWORD"}'|base64
-	connection, err := NewConnectionBuilder().
+	connection, err := NewAwxClientBuilder().
 		URL("https://tower.private/api").
 		Username("admin").
 		Password("PASSWORD").
@@ -135,7 +134,7 @@ func TestPreOAUTH2(t *testing.T) {
 	// Trigger the auth flow.
 	getProjectsRequest := projectsResource.Get()
 	if len(connection.token) != 0 || len(connection.bearer) != 0 {
-		t.Errorf("Connection should have no tokens. token: '%s', bearer: '%s'",
+		t.Errorf("Awx should have no tokens. token: '%s', bearer: '%s'",
 			connection.token,
 			connection.bearer)
 	}
@@ -144,7 +143,7 @@ func TestPreOAUTH2(t *testing.T) {
 		t.Errorf("Error sending project request: %s", err)
 	}
 	if len(connection.token) == 0 || len(connection.bearer) != 0 {
-		t.Errorf("Connection should have only an auth token. token: '%s', bearer: '%s'",
+		t.Errorf("Awx should have only an auth token. token: '%s', bearer: '%s'",
 			connection.token,
 			connection.bearer)
 	}

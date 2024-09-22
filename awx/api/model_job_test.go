@@ -16,9 +16,11 @@ limitations under the License.
 
 // This file contains the implementation of the job template type.
 
-package awx
+package api
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestIsSuccessful(t *testing.T) {
 	for _, status := range []JobStatus{
@@ -29,8 +31,8 @@ func TestIsSuccessful(t *testing.T) {
 			t.Errorf("Job.IsSuccessful() Should return false for %s", status)
 		}
 	}
-	if !(&Job{0, JobStatusSuccesful}).IsSuccessful() {
-		t.Errorf("Job.IsSuccessful() Should return true for JobStatusSuccesful")
+	if !(&Job{0, JobStatusSuccessful}).IsSuccessful() {
+		t.Errorf("Job.IsSuccessful() Should return true for JobStatusSuccessful")
 	}
 }
 
@@ -43,7 +45,7 @@ func TestIsFinished(t *testing.T) {
 		}
 	}
 	for _, status := range []JobStatus{
-		JobStatusSuccesful, JobStatusFailed, JobStatusError, JobStatusCancelled,
+		JobStatusSuccessful, JobStatusFailed, JobStatusError, JobStatusCancelled,
 	} {
 		if !(&Job{0, status}).IsFinished() {
 			t.Errorf("Job.IsFinished() Should return false for %s", status)

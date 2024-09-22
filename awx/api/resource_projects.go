@@ -17,19 +17,18 @@ limitations under the License.
 // This file contains the implementation of the resource that manages the collection of
 // projects.
 
-package awx
+package api
 
 import (
 	"fmt"
-
-	"github.com/moolitayer/awx-client-go/awx/internal/data"
+	"github.com/slink-go/awx-client-go/awx/api/internal/data"
 )
 
 type ProjectsResource struct {
 	Resource
 }
 
-func NewProjectsResource(connection *Connection, path string) *ProjectsResource {
+func NewProjectsResource(connection *Awx, path string) *ProjectsResource {
 	resource := new(ProjectsResource)
 	resource.connection = connection
 	resource.path = path

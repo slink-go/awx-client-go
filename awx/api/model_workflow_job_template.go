@@ -14,16 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This file contains the implementation of the properties shared by all lists.
+// This file contains the implementation of the job template type.
 
-package awx
+package api
 
-type ListGetResponse struct {
-	count    int
-	next     string
-	previous string
+type WorkflowJobTemplate struct {
+	id          int
+	name        string
+	description string
+	labels      []string
 }
 
-func (r *ListGetResponse) Count() int {
-	return r.count
+func (t *WorkflowJobTemplate) Id() int {
+	return t.id
+}
+
+func (t *WorkflowJobTemplate) Name() string {
+	return t.name
+}
+func (t *WorkflowJobTemplate) Description() string {
+	return t.description
+}
+func (t *WorkflowJobTemplate) Labels() []string {
+	return t.labels
 }

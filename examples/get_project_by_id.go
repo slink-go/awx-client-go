@@ -33,8 +33,7 @@ package main
 import (
 	"flag"
 	"fmt"
-
-	"github.com/moolitayer/awx-client-go/awx"
+	"github.com/slink-go/awx-client-go/awx/api"
 )
 
 var (
@@ -62,7 +61,7 @@ func main() {
 	flag.Parse()
 
 	// Connect to the server, and remember to close the connection:
-	connection, err := awx.NewConnectionBuilder().
+	connection, err := api.NewAwxClientBuilder().
 		URL(url).
 		Username(username).
 		Password(password).

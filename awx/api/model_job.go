@@ -16,19 +16,19 @@ limitations under the License.
 
 // This file contains the implementation of the job template type.
 
-package awx
+package api
 
 type JobStatus string
 
 const (
-	JobStatusNew       JobStatus = "new"
-	JobStatusPending   JobStatus = "pending"
-	JobStatusWaiting   JobStatus = "waiting"
-	JobStatusRunning   JobStatus = "running"
-	JobStatusSuccesful JobStatus = "successful"
-	JobStatusFailed    JobStatus = "failed"
-	JobStatusError     JobStatus = "error"
-	JobStatusCancelled JobStatus = "cancelled"
+	JobStatusNew        JobStatus = "new"
+	JobStatusPending    JobStatus = "pending"
+	JobStatusWaiting    JobStatus = "waiting"
+	JobStatusRunning    JobStatus = "running"
+	JobStatusSuccessful JobStatus = "successful"
+	JobStatusFailed     JobStatus = "failed"
+	JobStatusError      JobStatus = "error"
+	JobStatusCancelled  JobStatus = "cancelled"
 )
 
 type Job struct {
@@ -47,7 +47,7 @@ func (j *Job) Status() JobStatus {
 func (j *Job) IsFinished() bool {
 	switch j.status {
 	case
-		JobStatusSuccesful,
+		JobStatusSuccessful,
 		JobStatusFailed,
 		JobStatusError,
 		JobStatusCancelled:
@@ -57,5 +57,5 @@ func (j *Job) IsFinished() bool {
 }
 
 func (j *Job) IsSuccessful() bool {
-	return j.status == JobStatusSuccesful
+	return j.status == JobStatusSuccessful
 }

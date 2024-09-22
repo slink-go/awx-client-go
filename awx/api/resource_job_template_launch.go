@@ -17,19 +17,18 @@ limitations under the License.
 // This file contains the implementation of the resource that manages launching of jobs from job
 // templates.
 
-package awx
+package api
 
 import (
 	"encoding/json"
-
-	"github.com/moolitayer/awx-client-go/awx/internal/data"
+	"github.com/slink-go/awx-client-go/awx/api/internal/data"
 )
 
 type JobTemplateLaunchResource struct {
 	Resource
 }
 
-func NewJobTemplateLaunchResource(connection *Connection, path string) *JobTemplateLaunchResource {
+func NewJobTemplateLaunchResource(connection *Awx, path string) *JobTemplateLaunchResource {
 	resource := new(JobTemplateLaunchResource)
 	resource.connection = connection
 	resource.path = path

@@ -17,17 +17,17 @@ limitations under the License.
 // This file contains the implementation of the resource that manages a specific job
 // template.
 
-package awx
+package api
 
 import (
-	"github.com/moolitayer/awx-client-go/awx/internal/data"
+	"github.com/slink-go/awx-client-go/awx/api/internal/data"
 )
 
 type JobTemplateResource struct {
 	Resource
 }
 
-func NewJobTemplateResource(connection *Connection, path string) *JobTemplateResource {
+func NewJobTemplateResource(connection *Awx, path string) *JobTemplateResource {
 	resource := new(JobTemplateResource)
 	resource.connection = connection
 	resource.path = path
@@ -58,8 +58,17 @@ func (r *JobTemplateGetRequest) Send() (response *JobTemplateGetResponse, err er
 	response.result = new(JobTemplate)
 	response.result.id = output.Id
 	response.result.name = output.Name
-	response.result.askLimitOnLaunch = output.AskLimitOnLaunch
-	response.result.askVarsOnLaunch = output.AskVarsOnLaunch
+	if output.Summary != nil && output.Summary.Labels != nil {
+		for _, l := range output.Summary.Labels.Results {
+			ll := Label{
+				id:   l.Id,
+				name: l.Name,
+			}
+			response.result.labels = append(response.result.labels, ll.name)
+		}
+	}
+	//response.result.askLimitOnLaunch = output.AskLimitOnLaunch
+	//response.result.askVarsOnLaunch = output.AskVarsOnLaunch
 
 	return
 }

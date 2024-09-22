@@ -16,15 +16,16 @@ limitations under the License.
 
 // This file contains the basic implementation shared by all the resources.
 
-package awx
+package api
 
 import (
 	"net/url"
 )
 
 type Resource struct {
-	connection *Connection
-	path       string
+	connection   *Awx
+	templatePath string
+	path         string
 }
 
 func (r *Resource) get(query url.Values, output interface{}) error {

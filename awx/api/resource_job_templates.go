@@ -17,23 +17,31 @@ limitations under the License.
 // This file contains the implementation of the resource that manages the collection of
 // job templates.
 
-package awx
+package api
 
 import (
 	"fmt"
-
-	"github.com/moolitayer/awx-client-go/awx/internal/data"
+	"github.com/slink-go/awx-client-go/awx/api/internal/data"
 )
 
 type JobTemplatesResource struct {
 	Resource
 }
 
-func NewJobTemplatesResource(connection *Connection, path string) *JobTemplatesResource {
+func NewJobTemplatesResource(connection *Awx, path string) *JobTemplatesResource {
 	resource := new(JobTemplatesResource)
 	resource.connection = connection
 	resource.path = path
 	return resource
+}
+
+func (r *JobTemplatesResource) Page(num int, size int) *JobTemplatesGetRequest {
+	request := new(JobTemplatesGetRequest)
+	request.resource = &r.Resource
+	request.query = make(map[string][]string)
+	request.query.Add("page", fmt.Sprintf("%v", num))
+	request.query.Add("page_size", fmt.Sprintf("%v", size))
+	return request
 }
 
 func (r *JobTemplatesResource) Get() *JobTemplatesGetRequest {
@@ -70,18 +78,29 @@ func (r *JobTemplatesGetRequest) Send() (response *JobTemplatesGetResponse, err 
 		response.results[i] = new(JobTemplate)
 		response.results[i].id = output.Results[i].Id
 		response.results[i].name = output.Results[i].Name
-		response.results[i].askLimitOnLaunch = output.Results[i].AskLimitOnLaunch
-		response.results[i].askVarsOnLaunch = output.Results[i].AskVarsOnLaunch
+		if output.Results[i].Summary != nil && output.Results[i].Summary.Labels != nil {
+			for _, l := range output.Results[i].Summary.Labels.Results {
+				ll := Label{
+					id:   l.Id,
+					name: l.Name,
+				}
+				response.results[i].labels = append(response.results[i].labels, ll.name)
+			}
+		}
+		//response.results[i].askLimitOnLaunch = output.Results[i].AskLimitOnLaunch
+		//response.results[i].askVarsOnLaunch = output.Results[i].AskVarsOnLaunch
 	}
 	return
 }
 
 type JobTemplatesGetResponse struct {
 	ListGetResponse
-
 	results []*JobTemplate
 }
 
 func (r *JobTemplatesGetResponse) Results() []*JobTemplate {
 	return r.results
+}
+func (r *JobTemplatesGetResponse) HasNext() bool {
+	return r.next != ""
 }
