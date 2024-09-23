@@ -16,6 +16,12 @@ type TemplateFetcher struct {
 
 // region - public API
 
+//
+// Basic Auth, Token Auth, Cookie Auth						<- AuthenticationSource / AuthenticationMethod
+// AuthenticationN 	A13N: 	local, delegated, ... 			<- AuthenticationProvider
+// AuthorizatioN	A11N:	local (?), SpiceDB, permify 	<- AuthorizationProvider
+//
+
 func NewTemplateFetcher(awxClient *api.Awx, requestDelay time.Duration, templateFilters ...TemplateFilter) *TemplateFetcher {
 	return &TemplateFetcher{
 		awxClient:       awxClient,

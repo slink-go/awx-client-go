@@ -38,7 +38,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	awx "github.com/slink-go/awx-client-go/awx/client"
+	awx "github.com/slink-go/awx-client-go/awx/api"
 	"github.com/slink-go/logging"
 	"strings"
 )
@@ -130,15 +130,15 @@ func main() {
 	for _, t := range templatesResponse.Results() {
 		launchResource := client.JobTemplates().Id(t.Id()).Launch()
 
-		if limit != "" && !t.AskLimitOnLaunch() {
-			logging.GetLogger("launch job template").Warning("About to launch template '%s' with limit '%s', but 'prompt-on-launch' is false. Limit will be ignored",
-				template, limit)
-		}
+		//if limit != "" && !t.AskLimitOnLaunch() {
+		//	logging.GetLogger("launch job template").Warning("About to launch template '%s' with limit '%s', but 'prompt-on-launch' is false. Limit will be ignored",
+		//		template, limit)
+		//}
 
-		if extraVars != nil && !t.AskVarsOnLaunch() {
-			logging.GetLogger("launch job template").Warning("About to launch template '%s' with extra-vars, but 'prompt-on-launch' is false. Extra Variables will be ignored",
-				template)
-		}
+		//if extraVars != nil && !t.AskVarsOnLaunch() {
+		//	logging.GetLogger("launch job template").Warning("About to launch template '%s' with extra-vars, but 'prompt-on-launch' is false. Extra Variables will be ignored",
+		//		template)
+		//}
 
 		response, err := launchResource.Post().
 			Limit(limit).

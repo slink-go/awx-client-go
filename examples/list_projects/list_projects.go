@@ -32,6 +32,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/slink-go/awx-client-go/awx/api"
 )
 
 var (

@@ -32,6 +32,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/slink-go/awx-client-go/awx/api"
 )
 
 var (
@@ -83,8 +84,6 @@ func main() {
 	// Print the results:
 	templates := getTemplatesResponse.Results()
 	for _, template := range templates {
-		fmt.Printf("%d: %s - Ask Limit: %v, Ask Vars: %v\n",
-			template.Id(), template.Name(),
-			template.AskLimitOnLaunch(), template.AskVarsOnLaunch())
+		fmt.Printf("%d: %s\n", template.Id(), template.Name())
 	}
 }
